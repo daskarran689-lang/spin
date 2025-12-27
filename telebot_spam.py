@@ -417,7 +417,21 @@ def main():
     Thread(target=run_flask, daemon=True).start()
     Thread(target=keep_alive, daemon=True).start()
     print("🤖 Bot đang khởi động...")
-    bot.infinity_polling()
+    
+    # Xóa webhook cũ và pending updates để tránh conflict
+    try:
+        bot.delete_webhook(drop_pending_updates=True)
+        print("✅ Đã xóa webhook cũ")
+    except:
+        pass
+    
+    while True:
+        try:
+            bot.infinity_polling(timeout=60, long_polling_timeout=60)
+        except Exception as e:
+            print(f"⚠️ Lỗi polling: {e}")
+            print("🔄 Thử lại sau 5 giây...")
+            time.sleep(5)
 
 if __name__ == "__main__":
     main()
