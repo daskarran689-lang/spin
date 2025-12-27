@@ -78,10 +78,10 @@ def save_winner(prize, name, phone, token):
         pass
     return link
 
-def get_winners_from_db():
+def get_winners_from_db(limit=100):
     try:
         resp = requests.get(
-            f"{SUPABASE_URL}/rest/v1/winners?order=created_at.desc&limit=20",
+            f"{SUPABASE_URL}/rest/v1/winners?order=created_at.desc&limit={limit}",
             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
             timeout=10
         )
@@ -379,11 +379,21 @@ def winners_cmd(message):
 
 @bot.message_handler(commands=['file'])
 def file_cmd(message):
-    if os.path.exists("winners.txt"):
-        with open("winners.txt", "rb") as f:
-            bot.send_document(message.chat.id, f, caption="📄 <b>Danh sách trúng thưởng đầy đủ</b>\n\n💡 <i>File chứa tất cả giải đã trúng</i>")
-    else:
-        bot.reply_to(message, "📭 <b>Chưa có file!</b>\n\n💡 <i>Dùng /spam để bắt đầu quay</i>")
+    # Lấy từ database
+    db_winners = get_winners_from_db(limit=500)
+    
+    if not db_winners and not os.path.exists("winners.txt"):
+        bot.reply_to(message, "📭 Chưa có dữ liệu!")
+        return
+    
+    # Tạo file từ database
+    if db_winners:
+        with open("winners.txt", "w", encoding="utf-8") as f:
+            for w in db_winners:
+                f.write(f"{w['prize']} | {w['name']} | {w['phone']} | {w['link']}\n")
+    
+    with open("winners.txt", "rb") as f:
+        bot.send_document(message.chat.id, f, caption=f"📄 {len(db_winners)} giải trúng")
 
 def main():
     Thread(target=run_flask, daemon=True).start()
