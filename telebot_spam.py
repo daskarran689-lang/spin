@@ -4,15 +4,12 @@ import time
 import random
 import string
 import requests
-import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock, Thread
-from telegram import Update, InputFile
-from telegram.ext import Application, CommandHandler, ContextTypes
+import telebot
 from flask import Flask
-import threading
 
-# Flask app de giu cho Render khong tat
+# Flask app
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
@@ -25,33 +22,31 @@ def health():
 
 def run_flask():
     port = int(os.environ.get('PORT', 10000))
-    flask_app.run(host='0.0.0.0', port=port)
+    flask_app.run(host='0.0.0.0', port=port, threaded=True)
 
 def keep_alive():
-    """Tu ping chinh minh moi 10 phut de Render khong tat"""
     render_url = os.environ.get('RENDER_EXTERNAL_URL')
     while True:
-        time.sleep(600)  # 10 phut
+        time.sleep(600)
         if render_url:
             try:
                 requests.get(f"{render_url}/health", timeout=10)
-                print("Self-ping OK")
             except:
                 pass
 
 # ============ CONFIG ============
 BOT_TOKEN = "8594188404:AAGyCFwEEeLJ5Fm92Py898GRlyYH_Uo2c5w"
-ADMIN_IDS = []  # Them ID cua ban vao day, VD: [123456789]
 # ================================
 
-surnames = ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Huynh', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui', 'Do', 'Ho', 'Ngo', 'Duong', 'Ly', 'Truong', 'Dinh', 'Mai', 'Trinh', 'Dao', 'Cao', 'Lam', 'Nghiem', 'Chau', 'Ta', 'Quach', 'Luong', 'Vuong', 'La']
-middle_names = ['Van', 'Thi', 'Huu', 'Thanh', 'Minh', 'Duc', 'Quoc', 'Ngoc', 'Hoang', 'Xuan', 'Thu', 'Hai', 'Tuan', 'Anh', 'Phuong', 'Khanh', 'Bao', 'Gia', 'Dinh', 'Trung']
-first_names = ['An', 'Binh', 'Cuong', 'Dat', 'Phong', 'Giang', 'Hai', 'Kien', 'Lam', 'Anh', 'Bich', 'Chau', 'Diem', 'Phuong', 'Hien', 'Hung', 'Dung', 'Tuan', 'Nam', 'Long', 'Hoa', 'Lan', 'Mai', 'Linh', 'Trang', 'Thao', 'Nhi', 'Vy', 'Uyen', 'Trinh']
+bot = telebot.TeleBot(BOT_TOKEN)
+
+surnames = ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Huynh', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui', 'Do', 'Ho', 'Ngo', 'Duong', 'Ly', 'Truong', 'Dinh', 'Mai', 'Trinh']
+middle_names = ['Van', 'Thi', 'Huu', 'Thanh', 'Minh', 'Duc', 'Quoc', 'Ngoc', 'Hoang', 'Xuan', 'Thu', 'Hai', 'Tuan', 'Anh', 'Phuong']
+first_names = ['An', 'Binh', 'Cuong', 'Dat', 'Phong', 'Giang', 'Hai', 'Kien', 'Lam', 'Anh', 'Bich', 'Chau', 'Diem', 'Phuong', 'Hien', 'Hung', 'Dung', 'Tuan', 'Nam', 'Long']
 provinces = ["Ha Noi", "TP Ho Chi Minh", "Da Nang", "Hai Phong", "Can Tho", "An Giang", "Binh Duong", "Dong Nai", "Gia Lai", "Quang Nam"]
 
 BASE_URL = "https://spin-form.vercel.app"
 
-# Global state
 lock = Lock()
 spam_running = False
 stop_flag = False
@@ -80,31 +75,26 @@ def fetch_proxies():
         "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
         "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt",
     ]
-    
     for url in sources:
         try:
             resp = requests.get(url, timeout=15)
             if resp.status_code == 200:
                 for line in resp.text.strip().split('\n'):
                     line = line.strip()
-                    if line and ':' in line and not line.startswith('#'):
-                        ip_port = line.split()[0] if ' ' in line else line
-                        if not ip_port.startswith('http'):
-                            ip_port = f"http://{ip_port}"
-                        proxies.append(ip_port)
+                    if line and ':' in line:
+                        if not line.startswith('http'):
+                            line = f"http://{line}"
+                        proxies.append(line)
         except:
             pass
-    
     random.shuffle(proxies)
     return list(set(proxies))[:2000]
 
 def test_proxy(proxy):
     try:
-        name = f"Test {random.randint(1000,9999)}"
-        phone = f"09{random.randint(10000000,99999999)}"
         resp = requests.post(
             f"{BASE_URL}/api/public/register",
-            json={"name": name, "phone": phone, "metadata": {"note": "", "address": "Ha Noi"}},
+            json={"name": "Test", "phone": "0901234567", "metadata": {"note": "", "address": "Ha Noi"}},
             proxies={"http": proxy, "https": proxy},
             headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/json', 'Origin': BASE_URL},
             timeout=8
@@ -117,7 +107,7 @@ def test_proxy(proxy):
 
 def get_working_proxies(proxies, limit=50):
     working = []
-    with ThreadPoolExecutor(max_workers=300) as executor:
+    with ThreadPoolExecutor(max_workers=200) as executor:
         futures = {executor.submit(test_proxy, p): p for p in proxies}
         for future in as_completed(futures):
             result = future.result()
@@ -160,12 +150,11 @@ def spin_once(session, headers, proxy):
             stats[prize_name] = stats.get(prize_name, 0) + 1
         
         prize_lower = prize_name.lower()
-        if any(x in prize_lower for x in ['laptop', 'iphone', 'gấu bông', 'gau bong', 'sổ tay', 'so tay']):
+        if any(x in prize_lower for x in ['laptop', 'iphone', 'gau bong', 'so tay', 'sổ tay', 'gấu bông']):
             link = save_winner(prize_name, name, phone, token)
             with lock:
                 winners.append({"prize": prize_name, "name": name, "phone": phone, "link": link})
             return {"prize": prize_name, "name": name, "phone": phone, "link": link}
-        
         return {"prize": prize_name}
     except:
         return None
@@ -174,15 +163,12 @@ def worker():
     global stop_flag, working_proxies
     session = requests.Session()
     headers = {
-        'User-Agent': f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/{random.randint(110,125)}.0.0.0',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*',
         'Origin': BASE_URL,
-        'Referer': f'{BASE_URL}/',
         'Content-Type': 'application/json',
     }
-    
     proxy_index = random.randint(0, max(0, len(working_proxies)-1))
-    
     while not stop_flag:
         if not working_proxies:
             time.sleep(1)
@@ -191,49 +177,47 @@ def worker():
         spin_once(session, headers, proxy)
         proxy_index = (proxy_index + 1) % len(working_proxies)
 
-# ============ TELEGRAM HANDLERS ============
+# ============ BOT HANDLERS ============
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+@bot.message_handler(commands=['start'])
+def start(message):
+    bot.reply_to(message, 
         "🎰 BOT SPAM VONG QUAY\n\n"
-        "Lenh:\n"
         "/spam - Bat dau spam\n"
         "/stop - Dung spam\n"
         "/stats - Xem thong ke\n"
-        "/winners - Xem danh sach trung\n"
+        "/winners - Danh sach trung\n"
         "/file - Tai file winners.txt"
     )
 
-async def spam_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@bot.message_handler(commands=['spam'])
+def spam_cmd(message):
     global spam_running, stop_flag, count, stats, winners, working_proxies
     
     if spam_running:
-        await update.message.reply_text("⚠️ Dang spam roi!")
+        bot.reply_to(message, "⚠️ Dang spam roi!")
         return
     
-    await update.message.reply_text("🔄 Dang tai va test proxy...")
+    bot.reply_to(message, "🔄 Dang tai va test proxy...")
     
-    # Reset state
     stop_flag = False
     count = 0
     stats = {}
     winners = []
     
-    # Fetch proxies
     all_proxies = fetch_proxies()
-    await update.message.reply_text(f"📥 Da tai {len(all_proxies)} proxy, dang test...")
+    bot.send_message(message.chat.id, f"📥 Da tai {len(all_proxies)} proxy, dang test...")
     
     working_proxies = get_working_proxies(all_proxies, limit=50)
     
     if not working_proxies:
-        await update.message.reply_text("❌ Khong tim thay proxy hoat dong!")
+        bot.send_message(message.chat.id, "❌ Khong tim thay proxy!")
         return
     
-    await update.message.reply_text(f"✅ Tim duoc {len(working_proxies)} proxy tot!\n🚀 Bat dau spam voi 50 threads...")
+    bot.send_message(message.chat.id, f"✅ {len(working_proxies)} proxy OK!\n🚀 Bat dau spam...")
     
     spam_running = True
     
-    # Start workers in background
     def run_spam():
         global spam_running
         with ThreadPoolExecutor(max_workers=50) as executor:
@@ -242,92 +226,57 @@ async def spam_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     Thread(target=run_spam, daemon=True).start()
 
-async def stop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@bot.message_handler(commands=['stop'])
+def stop_cmd(message):
     global spam_running, stop_flag
     
     if not spam_running:
-        await update.message.reply_text("⚠️ Chua bat spam!")
+        bot.reply_to(message, "⚠️ Chua bat spam!")
         return
     
     stop_flag = True
     spam_running = False
     
-    # Stats summary
-    msg = f"🛑 Da dung spam!\n\n📊 Thong ke:\n"
-    msg += f"Tong: {count} lan quay\n"
-    msg += f"Trung giai: {len(winners)}\n\n"
-    
+    msg = f"🛑 Da dung!\n\nTong: {count} lan\nTrung: {len(winners)}\n\n"
     for k, v in sorted(stats.items(), key=lambda x: -x[1])[:10]:
         msg += f"• {k}: {v}\n"
     
-    await update.message.reply_text(msg)
+    bot.reply_to(message, msg)
 
-async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global count, stats, winners, spam_running
-    
+@bot.message_handler(commands=['stats'])
+def stats_cmd(message):
     status = "🟢 Dang chay" if spam_running else "🔴 Da dung"
-    msg = f"📊 THONG KE\n\nTrang thai: {status}\n"
-    msg += f"Tong: {count} lan quay\n"
-    msg += f"Trung giai: {len(winners)}\n\n"
-    
-    if stats:
-        for k, v in sorted(stats.items(), key=lambda x: -x[1])[:10]:
-            msg += f"• {k}: {v}\n"
-    
-    await update.message.reply_text(msg)
+    msg = f"📊 THONG KE\n\n{status}\nTong: {count}\nTrung: {len(winners)}\n\n"
+    for k, v in sorted(stats.items(), key=lambda x: -x[1])[:10]:
+        msg += f"• {k}: {v}\n"
+    bot.reply_to(message, msg)
 
-async def winners_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global winners
-    
+@bot.message_handler(commands=['winners'])
+def winners_cmd(message):
     if not winners:
-        await update.message.reply_text("Chua trung giai nao!")
+        bot.reply_to(message, "Chua trung giai nao!")
         return
-    
-    msg = "🏆 DANH SACH TRUNG THUONG:\n\n"
-    for w in winners[-20:]:  # Last 20
-        msg += f"🎁 {w['prize']}\n"
-        msg += f"   {w['name']} | {w['phone']}\n"
-        msg += f"   {w['link']}\n\n"
-    
-    await update.message.reply_text(msg)
+    msg = "🏆 TRUNG THUONG:\n\n"
+    for w in winners[-15:]:
+        msg += f"🎁 {w['prize']}\n{w['name']} | {w['phone']}\n{w['link']}\n\n"
+    bot.reply_to(message, msg)
 
-async def file_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@bot.message_handler(commands=['file'])
+def file_cmd(message):
     if os.path.exists("winners.txt"):
-        await update.message.reply_document(
-            document=open("winners.txt", "rb"),
-            filename="winners.txt",
-            caption="📄 File danh sach trung thuong"
-        )
+        with open("winners.txt", "rb") as f:
+            bot.send_document(message.chat.id, f, caption="📄 Winners")
     else:
-        await update.message.reply_text("Chua co file winners.txt!")
+        bot.reply_to(message, "Chua co file!")
 
 def main():
-    if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
-        print("❌ Chua cau hinh BOT_TOKEN!")
-        print("Mo file va thay YOUR_BOT_TOKEN_HERE bang token bot cua ban")
-        return
+    # Start Flask
+    Thread(target=run_flask, daemon=True).start()
+    # Start keep-alive
+    Thread(target=keep_alive, daemon=True).start()
     
-    # Start Flask in background for Render
-    flask_thread = Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    
-    # Start keep-alive ping
-    ping_thread = Thread(target=keep_alive, daemon=True)
-    ping_thread.start()
-    
-    print("🤖 Dang khoi dong bot...")
-    
-    app = Application.builder().token(BOT_TOKEN).build()
-    
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("spam", spam_cmd))
-    app.add_handler(CommandHandler("stop", stop_cmd))
-    app.add_handler(CommandHandler("stats", stats_cmd))
-    app.add_handler(CommandHandler("winners", winners_cmd))
-    app.add_handler(CommandHandler("file", file_cmd))
-    
-    print("✅ Bot da san sang!")
-    app.run_polling()
+    print("🤖 Bot starting...")
+    bot.infinity_polling()
 
 if __name__ == "__main__":
     main()
