@@ -34,12 +34,15 @@ def keep_alive():
                 pass
 
 BOT_TOKEN = "8594188404:AAGyCFwEEeLJ5Fm92Py898GRlyYH_Uo2c5w"
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 
-surnames = ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Huynh', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui', 'Do', 'Ho', 'Ngo', 'Duong', 'Ly', 'Truong', 'Dinh', 'Mai', 'Trinh']
-middle_names = ['Van', 'Thi', 'Huu', 'Thanh', 'Minh', 'Duc', 'Quoc', 'Ngoc', 'Hoang', 'Xuan', 'Thu', 'Hai', 'Tuan', 'Anh', 'Phuong']
-first_names = ['An', 'Binh', 'Cuong', 'Dat', 'Phong', 'Giang', 'Hai', 'Kien', 'Lam', 'Anh', 'Bich', 'Chau', 'Diem', 'Phuong', 'Hien', 'Hung', 'Dung', 'Tuan', 'Nam', 'Long']
-provinces = ["Ha Noi", "TP Ho Chi Minh", "Da Nang", "Hai Phong", "Can Tho", "An Giang", "Binh Duong", "Dong Nai", "Gia Lai", "Quang Nam"]
+SUPABASE_URL = "https://xlsqhhniznmjgzqgwywq.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhsc3FoaG5pem5tamd6cWd3eXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MTM3MDYsImV4cCI6MjA4MjM4OTcwNn0.RxzefQNzdDWFuNIpE7pez9gZlzA7NmBmOkxw26Bji9s"
+
+surnames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý', 'Trương', 'Đinh', 'Mai', 'Trịnh', 'Đào', 'Cao', 'Lâm', 'Nghiêm', 'Châu', 'Tạ', 'Quách', 'Lương', 'Vương', 'La', 'Nhân', 'Tôn', 'Thạch', 'Kiều', 'Mạch', 'Triệu', 'Bạch', 'Kim', 'Hà', 'Tống']
+middle_names = ['Văn', 'Thị', 'Hữu', 'Thanh', 'Minh', 'Đức', 'Quốc', 'Ngọc', 'Hoàng', 'Xuân', 'Thu', 'Hải', 'Tuấn', 'Anh', 'Phương', 'Khánh', 'Bảo', 'Gia', 'Đình', 'Trung', 'Hồng', 'Kim', 'Thùy', 'Mỹ', 'Cẩm', 'Diệu', 'Tuyết', 'Quỳnh', 'Như', 'Bích']
+first_names = ['An', 'Bình', 'Cường', 'Đạt', 'Phong', 'Giang', 'Hải', 'Kiên', 'Lâm', 'Ánh', 'Bích', 'Châu', 'Diễm', 'Phương', 'Hiền', 'Hùng', 'Dũng', 'Tuấn', 'Nam', 'Long', 'Hoa', 'Lan', 'Mai', 'Linh', 'Trang', 'Thảo', 'Nhi', 'Vy', 'Uyên', 'Trinh', 'Tâm', 'Khoa', 'Thịnh', 'Phúc', 'Lộc', 'Tài', 'Nhân', 'Nghĩa', 'Tín', 'Sáng', 'Quang', 'Vinh', 'Huy', 'Khang', 'Minh', 'Tiến', 'Trung', 'Sơn', 'Đức', 'Thắng']
+provinces = ["Hà Nội", "TP Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "An Giang", "Bình Dương", "Đồng Nai", "Gia Lai", "Quảng Nam"]
 
 BASE_URL = "https://spin-form.vercel.app"
 
@@ -64,7 +67,29 @@ def save_winner(prize, name, phone, token):
     link = f"{BASE_URL}/spin/{token}"
     with open("winners.txt", "a", encoding="utf-8") as f:
         f.write(f"{prize} | {name} | {phone} | {link}\n")
+    try:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/winners",
+            json={"prize": prize, "name": name, "phone": phone, "link": link},
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
+            timeout=5
+        )
+    except:
+        pass
     return link
+
+def get_winners_from_db():
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/winners?order=created_at.desc&limit=20",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=10
+        )
+        if resp.status_code == 200:
+            return resp.json()
+    except:
+        pass
+    return []
 
 def fetch_proxies():
     proxies = []
@@ -92,7 +117,7 @@ def test_proxy(proxy):
     try:
         resp = requests.post(
             f"{BASE_URL}/api/public/register",
-            json={"name": "Test", "phone": "0901234567", "metadata": {"note": "", "address": "Ha Noi"}},
+            json={"name": "Test", "phone": "0901234567", "metadata": {"note": "", "address": "Hà Nội"}},
             proxies={"http": proxy, "https": proxy},
             headers={'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/json', 'Origin': BASE_URL},
             timeout=8
@@ -148,14 +173,26 @@ def spin_once(session, headers, proxy):
             stats[prize_name] = stats.get(prize_name, 0) + 1
         
         prize_lower = prize_name.lower()
-        if any(x in prize_lower for x in ['laptop', 'iphone', 'gau bong', 'so tay', 'sổ tay', 'gấu bông']):
+        if any(x in prize_lower for x in ['laptop', 'iphone', 'gấu bông', 'sổ tay']):
             link = save_winner(prize_name, name, phone, token)
             with lock:
                 winners.append({"prize": prize_name, "name": name, "phone": phone, "link": link})
-            # Thong bao trung thuong
             if status_chat_id:
                 try:
-                    bot.send_message(status_chat_id, f"🎉 TRUNG: {prize_name}\n{name} | {phone}\n{link}")
+                    msg = f"""
+🎊🎊🎊 <b>TRÚNG THƯỞNG!</b> 🎊🎊🎊
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎁 <b>Giải:</b> {prize_name}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 <b>Tên:</b> {name}
+📞 <b>SĐT:</b> <code>{phone}</code>
+🔗 <b>Link:</b> <a href="{link}">Xem kết quả</a>
+
+🎉 <i>Chúc mừng bạn đã trúng thưởng!</i>
+"""
+                    bot.send_message(status_chat_id, msg, disable_web_page_preview=True)
                 except:
                     pass
             return {"prize": prize_name, "name": name, "phone": phone, "link": link}
@@ -189,36 +226,55 @@ def update_status():
         if status_msg_id and status_chat_id and count != last_count:
             last_count = count
             try:
-                msg = f"🎰 DANG SPAM...\n\n"
-                msg += f"📊 Tong: {count} lan\n"
-                msg += f"🏆 Trung: {len(winners)} giai\n\n"
+                msg = f"""
+🎰 <b>ĐANG QUAY...</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Tổng lượt: <code>{count}</code>
+🏆 Trúng giải: <code>{len(winners)}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📈 <b>THỐNG KÊ:</b>
+"""
                 for k, v in sorted(stats.items(), key=lambda x: -x[1])[:5]:
-                    msg += f"• {k}: {v}\n"
+                    msg += f"  • {k}: <code>{v}</code>\n"
+                msg += "\n⏳ <i>Cập nhật mỗi 5 giây...</i>"
                 bot.edit_message_text(msg, status_chat_id, status_msg_id)
             except:
                 pass
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, 
-        "🎰 BOT SPAM VONG QUAY\n\n"
-        "/spam - Bat dau spam\n"
-        "/stop - Dung spam\n"
-        "/stats - Xem thong ke\n"
-        "/winners - Danh sach trung\n"
-        "/file - Tai file winners.txt"
-    )
+    msg = """
+🎰 <b>BOT SPAM VÒNG QUAY MAY MẮN</b> 🎰
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 <b>DANH SÁCH LỆNH:</b>
+
+  🚀 /spam   ➜  Bắt đầu quay
+  🛑 /stop   ➜  Dừng quay
+  📊 /stats  ➜  Xem thống kê
+  🏆 /winners ➜  Danh sách trúng
+  📄 /file   ➜  Tải file kết quả
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>Bot sẽ tự động thông báo khi trúng giải lớn!</i>
+🎁 <i>Giải theo dõi: Laptop, iPhone, Gấu bông, Sổ tay</i>
+"""
+    bot.reply_to(message, msg)
 
 @bot.message_handler(commands=['spam'])
 def spam_cmd(message):
     global spam_running, stop_flag, count, stats, winners, working_proxies, status_msg_id, status_chat_id
     
     if spam_running:
-        bot.reply_to(message, "⚠️ Dang spam roi!")
+        bot.reply_to(message, "⚠️ <b>Bot đang chạy rồi!</b>\n\n💡 Dùng /stop để dừng trước.")
         return
     
     status_chat_id = message.chat.id
-    msg = bot.reply_to(message, "🔄 Dang tai proxy...")
+    msg = bot.reply_to(message, "🔄 <b>Đang tải danh sách proxy...</b>\n\n⏳ <i>Vui lòng chờ...</i>")
     status_msg_id = msg.message_id
     
     stop_flag = False
@@ -227,15 +283,36 @@ def spam_cmd(message):
     winners = []
     
     all_proxies = fetch_proxies()
-    bot.edit_message_text(f"📥 Da tai {len(all_proxies)} proxy\n🔍 Dang test...", status_chat_id, status_msg_id)
+    bot.edit_message_text(f"""📥 Đã tải <b>{len(all_proxies)}</b> proxy
+
+🔍 <b>Đang kiểm tra proxy...</b>
+⏳ <i>Quá trình này mất khoảng 1-2 phút</i>""", status_chat_id, status_msg_id)
     
     working_proxies = get_working_proxies(all_proxies, limit=50)
     
     if not working_proxies:
-        bot.edit_message_text("❌ Khong tim thay proxy!", status_chat_id, status_msg_id)
+        bot.edit_message_text("""❌ <b>KHÔNG TÌM THẤY PROXY!</b>
+
+😔 Tất cả proxy đều không hoạt động.
+💡 Vui lòng thử lại sau ít phút.""", status_chat_id, status_msg_id)
         return
     
-    bot.edit_message_text(f"✅ {len(working_proxies)} proxy OK!\n🚀 Bat dau spam...\n\n📊 Tong: 0 lan\n🏆 Trung: 0 giai", status_chat_id, status_msg_id)
+    msg = f"""
+✅ <b>SẴN SÀNG QUAY!</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌐 <b>Proxy:</b> <code>{len(working_proxies)}</code> hoạt động
+🚀 <b>Threads:</b> <code>50</code> luồng
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎰 <b>ĐANG QUAY...</b>
+
+📊 Tổng lượt: <code>0</code>
+🏆 Trúng giải: <code>0</code>
+
+⏳ <i>Cập nhật mỗi 5 giây...</i>
+"""
+    bot.edit_message_text(msg, status_chat_id, status_msg_id)
     
     spam_running = True
     
@@ -253,15 +330,26 @@ def stop_cmd(message):
     global spam_running, stop_flag, status_msg_id, status_chat_id
     
     if not spam_running:
-        bot.reply_to(message, "⚠️ Chua bat spam!")
+        bot.reply_to(message, "⚠️ <b>Bot chưa chạy!</b>\n\n💡 Dùng /spam để bắt đầu.")
         return
     
     stop_flag = True
     spam_running = False
     
-    msg = f"🛑 DA DUNG!\n\n📊 Tong: {count} lan\n🏆 Trung: {len(winners)} giai\n\n"
+    msg = f"""
+🛑 <b>ĐÃ DỪNG QUAY!</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Tổng lượt quay: <code>{count}</code>
+🏆 Số giải trúng: <code>{len(winners)}</code>
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📈 <b>THỐNG KÊ CHI TIẾT:</b>
+"""
     for k, v in sorted(stats.items(), key=lambda x: -x[1])[:10]:
-        msg += f"• {k}: {v}\n"
+        msg += f"  • {k}: <code>{v}</code>\n"
+    
+    msg += "\n💡 <i>Dùng /winners để xem danh sách trúng thưởng</i>"
     
     if status_msg_id and status_chat_id:
         try:
@@ -273,34 +361,62 @@ def stop_cmd(message):
 
 @bot.message_handler(commands=['stats'])
 def stats_cmd(message):
-    status = "🟢 Dang chay" if spam_running else "🔴 Da dung"
-    msg = f"📊 THONG KE\n\n{status}\nTong: {count}\nTrung: {len(winners)}\n\n"
-    for k, v in sorted(stats.items(), key=lambda x: -x[1])[:10]:
-        msg += f"• {k}: {v}\n"
+    status = "🟢 <b>ĐANG CHẠY</b>" if spam_running else "🔴 <b>ĐÃ DỪNG</b>"
+    msg = f"""
+📊 <b>THỐNG KÊ HIỆN TẠI</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+{status}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📈 Tổng lượt quay: <code>{count}</code>
+🏆 Số giải trúng: <code>{len(winners)}</code>
+
+📋 <b>CHI TIẾT GIẢI:</b>
+"""
+    if stats:
+        for k, v in sorted(stats.items(), key=lambda x: -x[1])[:10]:
+            msg += f"  • {k}: <code>{v}</code>\n"
+    else:
+        msg += "  <i>Chưa có dữ liệu</i>\n"
     bot.reply_to(message, msg)
 
 @bot.message_handler(commands=['winners'])
 def winners_cmd(message):
-    if not winners:
-        bot.reply_to(message, "Chua trung giai nao!")
+    db_winners = get_winners_from_db()
+    data = db_winners if db_winners else winners
+    
+    if not data:
+        bot.reply_to(message, "📭 <b>Chưa có giải thưởng nào!</b>\n\n💡 <i>Dùng /spam để bắt đầu quay</i>")
         return
-    msg = "🏆 TRUNG THUONG:\n\n"
-    for w in winners[-15:]:
-        msg += f"🎁 {w['prize']}\n{w['name']} | {w['phone']}\n{w['link']}\n\n"
-    bot.reply_to(message, msg)
+    
+    msg = """🏆 <b>DANH SÁCH TRÚNG THƯỞNG</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+    for i, w in enumerate(data[:15], 1):
+        msg += f"""<b>{i}.</b> 🎁 <b>{w['prize']}</b>
+    👤 {w['name']}
+    📞 <code>{w['phone']}</code>
+    🔗 <a href="{w['link']}">Xem kết quả</a>
+
+"""
+    msg += "━━━━━━━━━━━━━━━━━━━━━━━━\n💡 <i>Dùng /file để tải file đầy đủ</i>"
+    bot.reply_to(message, msg, disable_web_page_preview=True)
 
 @bot.message_handler(commands=['file'])
 def file_cmd(message):
     if os.path.exists("winners.txt"):
         with open("winners.txt", "rb") as f:
-            bot.send_document(message.chat.id, f, caption="📄 Winners")
+            bot.send_document(message.chat.id, f, caption="📄 <b>Danh sách trúng thưởng đầy đủ</b>\n\n💡 <i>File chứa tất cả giải đã trúng</i>")
     else:
-        bot.reply_to(message, "Chua co file!")
+        bot.reply_to(message, "📭 <b>Chưa có file!</b>\n\n💡 <i>Dùng /spam để bắt đầu quay</i>")
 
 def main():
     Thread(target=run_flask, daemon=True).start()
     Thread(target=keep_alive, daemon=True).start()
-    print("🤖 Bot starting...")
+    print("🤖 Bot đang khởi động...")
     bot.infinity_polling()
 
 if __name__ == "__main__":

@@ -7,10 +7,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 from playwright.sync_api import sync_playwright
 
-surnames = ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Huynh', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui', 'Do', 'Ho', 'Ngo', 'Duong', 'Ly', 'Truong', 'Dinh', 'Mai', 'Trinh', 'Dao', 'Cao', 'Lam', 'Nghiem', 'Chau', 'Ta', 'Quach', 'Luong', 'Vuong', 'La', 'Tran', 'Nhan', 'Ton', 'Thach', 'Kieu', 'Mach', 'Trieu', 'Bach', 'Kim', 'Ha']
-middle_names = ['Van', 'Thi', 'Huu', 'Thanh', 'Minh', 'Duc', 'Quoc', 'Ngoc', 'Hoang', 'Xuan', 'Thu', 'Hai', 'Tuan', 'Anh', 'Phuong', 'Khanh', 'Bao', 'Gia', 'Dinh', 'Trung', 'Hong', 'Kim', 'Thuy', 'My', 'Cam', 'Dieu', 'Tuyet', 'Quynh', 'Nhu', 'Bich']
-first_names = ['An', 'Binh', 'Cuong', 'Dat', 'Phong', 'Giang', 'Hai', 'Kien', 'Lam', 'Anh', 'Bich', 'Chau', 'Diem', 'Phuong', 'Hien', 'Hung', 'Dung', 'Tuan', 'Nam', 'Long', 'Hoa', 'Lan', 'Mai', 'Linh', 'Trang', 'Thao', 'Nhi', 'Vy', 'Uyen', 'Trinh', 'Tam', 'Khoa', 'Thinh', 'Phuc', 'Loc', 'Tai', 'Nhan', 'Nghia', 'Tin', 'Sang', 'Quang', 'Vinh', 'Huy', 'Khang', 'Minh', 'Tien', 'Trung', 'Son', 'Duc', 'Thang', 'Thi', 'Nga', 'Huong', 'Yen', 'Nhung', 'Ha', 'Ly', 'Ngoc', 'Hanh', 'Duyen']
-provinces = ["Ha Noi", "TP Ho Chi Minh", "Da Nang", "Hai Phong", "Can Tho", "An Giang", "Binh Duong", "Dong Nai", "Gia Lai", "Quang Nam"]
+surnames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý', 'Trương', 'Đinh', 'Mai', 'Trịnh', 'Đào', 'Cao', 'Lâm', 'Nghiêm', 'Châu', 'Tạ', 'Quách', 'Lương', 'Vương', 'La', 'Nhân', 'Tôn', 'Thạch', 'Kiều', 'Mạch', 'Triệu', 'Bạch', 'Kim', 'Hà']
+middle_names = ['Văn', 'Thị', 'Hữu', 'Thanh', 'Minh', 'Đức', 'Quốc', 'Ngọc', 'Hoàng', 'Xuân', 'Thu', 'Hải', 'Tuấn', 'Anh', 'Phương', 'Khánh', 'Bảo', 'Gia', 'Đình', 'Trung', 'Hồng', 'Kim', 'Thùy', 'Mỹ', 'Cẩm', 'Diệu', 'Tuyết', 'Quỳnh', 'Như', 'Bích']
+first_names = ['An', 'Bình', 'Cường', 'Đạt', 'Phong', 'Giang', 'Hải', 'Kiên', 'Lâm', 'Ánh', 'Bích', 'Châu', 'Diễm', 'Phương', 'Hiền', 'Hùng', 'Dũng', 'Tuấn', 'Nam', 'Long', 'Hoa', 'Lan', 'Mai', 'Linh', 'Trang', 'Thảo', 'Nhi', 'Vy', 'Uyên', 'Trinh', 'Tâm', 'Khoa', 'Thịnh', 'Phúc', 'Lộc', 'Tài', 'Nhân', 'Nghĩa', 'Tín', 'Sáng', 'Quang', 'Vinh', 'Huy', 'Khang', 'Minh', 'Tiến', 'Trung', 'Sơn', 'Đức', 'Thắng', 'Thị', 'Nga', 'Hương', 'Yến', 'Nhung', 'Hà', 'Lý', 'Ngọc', 'Hạnh', 'Duyên']
+provinces = ["Hà Nội", "TP Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "An Giang", "Bình Dương", "Đồng Nai", "Gia Lai", "Quảng Nam"]
 
 BASE_URL = "https://spin-form.vercel.app"
 
@@ -36,7 +36,7 @@ def fetch_proxies():
         "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt",
     ]
     
-    print("Dang tai proxy...")
+    print("🔄 Đang tải danh sách proxy...")
     for url in sources:
         try:
             resp = requests.get(url, timeout=15)
@@ -54,7 +54,7 @@ def fetch_proxies():
     # Shuffle va lay 2000 proxy dau
     random.shuffle(proxies)
     proxies = list(set(proxies))[:2000]
-    print(f"Da tai {len(proxies)} proxy")
+    print(f"📥 Đã tải {len(proxies)} proxy")
     return proxies
 
 def test_proxy(proxy):
@@ -83,7 +83,7 @@ def test_proxy(proxy):
 def get_working_proxies(proxies, max_workers=200, limit=50):
     working = []
     tested = 0
-    print(f"Dang test {len(proxies)} proxy (can {limit} proxy tot)...")
+    print(f"🔍 Đang kiểm tra {len(proxies)} proxy (cần {limit} proxy tốt)...")
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(test_proxy, p): p for p in proxies}
@@ -92,12 +92,12 @@ def get_working_proxies(proxies, max_workers=200, limit=50):
             result = future.result()
             if result:
                 working.append(result)
-                print(f"  [{len(working)}/{limit}] OK: {result}")
+                print(f"  ✅ [{len(working)}/{limit}] {result}")
                 if len(working) >= limit:
                     executor.shutdown(wait=False, cancel_futures=True)
                     break
             if tested % 100 == 0:
-                print(f"  Da test {tested} proxy, tim duoc {len(working)} proxy tot")
+                print(f"  📊 Đã test {tested} proxy, tìm được {len(working)} proxy tốt")
     
     return working
 
@@ -117,10 +117,10 @@ def capture_screenshot(prize, token):
             page.wait_for_timeout(3000)
             filename = f"win_{prize.replace(' ', '_')}_{int(time.time())}.png"
             page.screenshot(path=filename, full_page=True)
-            print(f">>> Da luu: {filename}")
+            print(f"  📸 Đã lưu ảnh: {filename}")
             browser.close()
     except Exception as e:
-        print(f">>> Loi chup: {e}")
+        print(f"  ⚠️ Lỗi chụp ảnh: {e}")
 
 def spin_once(session, headers, proxy):
     global count, stats, winners, stop_flag
@@ -159,22 +159,24 @@ def spin_once(session, headers, proxy):
         
         prize_lower = prize_name.lower()
         
-        # Ghi lai token so tay (khong chup anh)
+        # Ghi lại token sổ tay (không chụp ảnh)
         if 'sổ tay' in prize_lower or 'so tay' in prize_lower:
             with lock:
                 winners.append({"name": name, "phone": phone, "prize": prize_name, "token": token})
                 save_winner(prize_name, name, phone, token)
-            print(f"  -> Luu token so tay: {token}")
+            print(f"  📓 Lưu Sổ tay → {token[:20]}...")
         
-        # Chup anh cho laptop, iphone, gau bong
+        # Chụp ảnh cho laptop, iphone, gấu bông
         if any(x in prize_lower for x in ['laptop', 'iphone', 'gấu bông', 'gau bong']):
             with lock:
                 winners.append({"name": name, "phone": phone, "prize": prize_name, "token": token})
                 save_winner(prize_name, name, phone, token)
-            print(f"\n{'='*60}")
-            print(f"*** TRUNG: {prize_name} ***")
-            print(f"Ten: {name} | SDT: {phone} | Token: {token}")
-            print(f"{'='*60}\n")
+            print(f"\n{'═'*60}")
+            print(f"🎊🎊🎊 TRÚNG LỚN: {prize_name} 🎊🎊🎊")
+            print(f"👤 Tên: {name}")
+            print(f"📞 SĐT: {phone}")
+            print(f"🔗 Token: {token}")
+            print(f"{'═'*60}\n")
             capture_screenshot(prize_name, token)
         return True
     except:
@@ -219,14 +221,17 @@ def main():
     working_proxies = get_working_proxies(all_proxies, max_workers=500, limit=100)
     
     if not working_proxies:
-        print("\nKhong tim thay proxy hoat dong!")
-        print("Thu lai sau hoac dung VPN.")
+        print("\n❌ Không tìm thấy proxy hoạt động!")
+        print("💡 Thử lại sau hoặc dùng VPN.")
         return
     
-    print(f"\n{'='*60}")
-    print(f"SPAM VONG QUAY - {NUM_THREADS} THREADS + {len(working_proxies)} PROXIES")
-    print("="*60)
-    print("Nhan Ctrl+C de dung\n")
+    print(f"\n{'═'*60}")
+    print(f"🎰 SPAM VÒNG QUAY MAY MẮN")
+    print(f"{'═'*60}")
+    print(f"🚀 Threads: {NUM_THREADS}")
+    print(f"🌐 Proxies: {len(working_proxies)}")
+    print(f"{'═'*60}")
+    print("⌨️  Nhấn Ctrl+C để dừng\n")
     
     executor = ThreadPoolExecutor(max_workers=NUM_THREADS)
     try:
@@ -236,17 +241,24 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        print("\n\nDang dung...")
+        print("\n\n🛑 Đang dừng...")
         stop_flag = True
         executor.shutdown(wait=False, cancel_futures=True)
-        print("\nTHONG KE:")
+        print(f"\n{'═'*60}")
+        print("📊 THỐNG KÊ KẾT QUẢ")
+        print(f"{'═'*60}")
         for k, v in sorted(stats.items(), key=lambda x: -x[1]):
-            print(f"  {k}: {v}")
-        print(f"\nTong: {count} lan | Trung: {len(winners)} giai")
+            print(f"  • {k}: {v}")
+        print(f"{'─'*60}")
+        print(f"📈 Tổng lượt quay: {count}")
+        print(f"🏆 Số giải trúng: {len(winners)}")
         if winners:
-            print("\nDanh sach trung:")
+            print(f"\n{'═'*60}")
+            print("🎁 DANH SÁCH TRÚNG THƯỞNG")
+            print(f"{'═'*60}")
             for w in winners:
-                print(f"  - {w['prize']}: {w['name']} | {w['phone']}")
+                print(f"  🎊 {w['prize']}")
+                print(f"     👤 {w['name']} | 📞 {w['phone']}")
 
 if __name__ == "__main__":
     main()
