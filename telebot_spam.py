@@ -9,7 +9,6 @@ from threading import Lock, Thread
 import telebot
 from flask import Flask
 
-# Flask app
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
@@ -34,10 +33,7 @@ def keep_alive():
             except:
                 pass
 
-# ============ CONFIG ============
 BOT_TOKEN = "8594188404:AAGyCFwEEeLJ5Fm92Py898GRlyYH_Uo2c5w"
-# ================================
-
 bot = telebot.TeleBot(BOT_TOKEN)
 
 surnames = ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Huynh', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui', 'Do', 'Ho', 'Ngo', 'Duong', 'Ly', 'Truong', 'Dinh', 'Mai', 'Trinh']
@@ -54,6 +50,8 @@ count = 0
 stats = {}
 winners = []
 working_proxies = []
+status_msg_id = None
+status_chat_id = None
 
 def generate_name():
     return f"{random.choice(surnames)} {random.choice(middle_names)} {random.choice(first_names)}"
@@ -118,7 +116,7 @@ def get_working_proxies(proxies, limit=50):
     return working
 
 def spin_once(session, headers, proxy):
-    global count, stats, winners, stop_flag
+    global count, stats, winners, stop_flag, status_msg_id, status_chat_id
     if stop_flag:
         return None
     
@@ -154,6 +152,12 @@ def spin_once(session, headers, proxy):
             link = save_winner(prize_name, name, phone, token)
             with lock:
                 winners.append({"prize": prize_name, "name": name, "phone": phone, "link": link})
+            # Thong bao trung thuong
+            if status_chat_id:
+                try:
+                    bot.send_message(status_chat_id, f"🎉 TRUNG: {prize_name}\n{name} | {phone}\n{link}")
+                except:
+                    pass
             return {"prize": prize_name, "name": name, "phone": phone, "link": link}
         return {"prize": prize_name}
     except:
@@ -177,7 +181,22 @@ def worker():
         spin_once(session, headers, proxy)
         proxy_index = (proxy_index + 1) % len(working_proxies)
 
-# ============ BOT HANDLERS ============
+def update_status():
+    global status_msg_id, status_chat_id, spam_running, count, stats, winners, stop_flag
+    last_count = 0
+    while spam_running and not stop_flag:
+        time.sleep(5)
+        if status_msg_id and status_chat_id and count != last_count:
+            last_count = count
+            try:
+                msg = f"🎰 DANG SPAM...\n\n"
+                msg += f"📊 Tong: {count} lan\n"
+                msg += f"🏆 Trung: {len(winners)} giai\n\n"
+                for k, v in sorted(stats.items(), key=lambda x: -x[1])[:5]:
+                    msg += f"• {k}: {v}\n"
+                bot.edit_message_text(msg, status_chat_id, status_msg_id)
+            except:
+                pass
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -192,13 +211,15 @@ def start(message):
 
 @bot.message_handler(commands=['spam'])
 def spam_cmd(message):
-    global spam_running, stop_flag, count, stats, winners, working_proxies
+    global spam_running, stop_flag, count, stats, winners, working_proxies, status_msg_id, status_chat_id
     
     if spam_running:
         bot.reply_to(message, "⚠️ Dang spam roi!")
         return
     
-    bot.reply_to(message, "🔄 Dang tai va test proxy...")
+    status_chat_id = message.chat.id
+    msg = bot.reply_to(message, "🔄 Dang tai proxy...")
+    status_msg_id = msg.message_id
     
     stop_flag = False
     count = 0
@@ -206,15 +227,15 @@ def spam_cmd(message):
     winners = []
     
     all_proxies = fetch_proxies()
-    bot.send_message(message.chat.id, f"📥 Da tai {len(all_proxies)} proxy, dang test...")
+    bot.edit_message_text(f"📥 Da tai {len(all_proxies)} proxy\n🔍 Dang test...", status_chat_id, status_msg_id)
     
     working_proxies = get_working_proxies(all_proxies, limit=50)
     
     if not working_proxies:
-        bot.send_message(message.chat.id, "❌ Khong tim thay proxy!")
+        bot.edit_message_text("❌ Khong tim thay proxy!", status_chat_id, status_msg_id)
         return
     
-    bot.send_message(message.chat.id, f"✅ {len(working_proxies)} proxy OK!\n🚀 Bat dau spam...")
+    bot.edit_message_text(f"✅ {len(working_proxies)} proxy OK!\n🚀 Bat dau spam...\n\n📊 Tong: 0 lan\n🏆 Trung: 0 giai", status_chat_id, status_msg_id)
     
     spam_running = True
     
@@ -225,10 +246,11 @@ def spam_cmd(message):
         spam_running = False
     
     Thread(target=run_spam, daemon=True).start()
+    Thread(target=update_status, daemon=True).start()
 
 @bot.message_handler(commands=['stop'])
 def stop_cmd(message):
-    global spam_running, stop_flag
+    global spam_running, stop_flag, status_msg_id, status_chat_id
     
     if not spam_running:
         bot.reply_to(message, "⚠️ Chua bat spam!")
@@ -237,11 +259,17 @@ def stop_cmd(message):
     stop_flag = True
     spam_running = False
     
-    msg = f"🛑 Da dung!\n\nTong: {count} lan\nTrung: {len(winners)}\n\n"
+    msg = f"🛑 DA DUNG!\n\n📊 Tong: {count} lan\n🏆 Trung: {len(winners)} giai\n\n"
     for k, v in sorted(stats.items(), key=lambda x: -x[1])[:10]:
         msg += f"• {k}: {v}\n"
     
-    bot.reply_to(message, msg)
+    if status_msg_id and status_chat_id:
+        try:
+            bot.edit_message_text(msg, status_chat_id, status_msg_id)
+        except:
+            bot.reply_to(message, msg)
+    else:
+        bot.reply_to(message, msg)
 
 @bot.message_handler(commands=['stats'])
 def stats_cmd(message):
@@ -270,11 +298,8 @@ def file_cmd(message):
         bot.reply_to(message, "Chua co file!")
 
 def main():
-    # Start Flask
     Thread(target=run_flask, daemon=True).start()
-    # Start keep-alive
     Thread(target=keep_alive, daemon=True).start()
-    
     print("🤖 Bot starting...")
     bot.infinity_polling()
 
