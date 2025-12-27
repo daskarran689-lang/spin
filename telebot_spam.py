@@ -9,6 +9,35 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock, Thread
 from telegram import Update, InputFile
 from telegram.ext import Application, CommandHandler, ContextTypes
+from flask import Flask
+import threading
+
+# Flask app de giu cho Render khong tat
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def home():
+    return "Bot is running!"
+
+@flask_app.route('/health')
+def health():
+    return "OK"
+
+def run_flask():
+    port = int(os.environ.get('PORT', 10000))
+    flask_app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    """Tu ping chinh minh moi 10 phut de Render khong tat"""
+    render_url = os.environ.get('RENDER_EXTERNAL_URL')
+    while True:
+        time.sleep(600)  # 10 phut
+        if render_url:
+            try:
+                requests.get(f"{render_url}/health", timeout=10)
+                print("Self-ping OK")
+            except:
+                pass
 
 # ============ CONFIG ============
 BOT_TOKEN = "8594188404:AAGyCFwEEeLJ5Fm92Py898GRlyYH_Uo2c5w"
@@ -277,6 +306,14 @@ def main():
         print("❌ Chua cau hinh BOT_TOKEN!")
         print("Mo file va thay YOUR_BOT_TOKEN_HERE bang token bot cua ban")
         return
+    
+    # Start Flask in background for Render
+    flask_thread = Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    
+    # Start keep-alive ping
+    ping_thread = Thread(target=keep_alive, daemon=True)
+    ping_thread.start()
     
     print("🤖 Dang khoi dong bot...")
     
