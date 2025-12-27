@@ -177,24 +177,6 @@ def spin_once(session, headers, proxy):
             link = save_winner(prize_name, name, phone, token)
             with lock:
                 winners.append({"prize": prize_name, "name": name, "phone": phone, "link": link})
-            if status_chat_id:
-                try:
-                    msg = f"""
-🎊🎊🎊 <b>TRÚNG THƯỞNG!</b> 🎊🎊🎊
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-🎁 <b>Giải:</b> {prize_name}
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-👤 <b>Tên:</b> {name}
-📞 <b>SĐT:</b> <code>{phone}</code>
-🔗 <b>Link:</b> <a href="{link}">Xem kết quả</a>
-
-🎉 <i>Chúc mừng bạn đã trúng thưởng!</i>
-"""
-                    bot.send_message(status_chat_id, msg, disable_web_page_preview=True)
-                except:
-                    pass
             return {"prize": prize_name, "name": name, "phone": phone, "link": link}
         return {"prize": prize_name}
     except:
@@ -387,22 +369,12 @@ def winners_cmd(message):
     data = db_winners if db_winners else winners
     
     if not data:
-        bot.reply_to(message, "📭 <b>Chưa có giải thưởng nào!</b>\n\n💡 <i>Dùng /spam để bắt đầu quay</i>")
+        bot.reply_to(message, "📭 Chưa có giải nào!")
         return
     
-    msg = """🏆 <b>DANH SÁCH TRÚNG THƯỞNG</b>
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-"""
-    for i, w in enumerate(data[:15], 1):
-        msg += f"""<b>{i}.</b> 🎁 <b>{w['prize']}</b>
-    👤 {w['name']}
-    📞 <code>{w['phone']}</code>
-    🔗 <a href="{w['link']}">Xem kết quả</a>
-
-"""
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━\n💡 <i>Dùng /file để tải file đầy đủ</i>"
+    msg = "🏆 <b>TRÚNG THƯỞNG</b>\n\n"
+    for i, w in enumerate(data[:20], 1):
+        msg += f"{i}. {w['prize']} | <code>{w['phone']}</code> | <a href=\"{w['link']}\">Link</a>\n"
     bot.reply_to(message, msg, disable_web_page_preview=True)
 
 @bot.message_handler(commands=['file'])
